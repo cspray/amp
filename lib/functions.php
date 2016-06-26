@@ -773,7 +773,6 @@ function resolve($generator) {
     $cs->generator = $generator;
     $cs->returnValue = null;
     $cs->currentPromise = null;
-    $cs->nestingLevel = 0;
     $cs->reactor = reactor();
 
     __coroutineAdvance($cs);
@@ -799,10 +798,8 @@ function __coroutineAdvance(CoroutineState $cs) {
                 $cs->promisor->succeed($result);
             }
         } elseif ($yielded instanceof Promise) {
-            if ($cs->nestingLevel < 3) {
-                $cs->nestingLevel++;
+            if ($cs->generator->valid()) {
                 $yielded->when('Amp\__coroutineSend', $cs);
-                $cs->nestingLevel--;
             } else {
                 $cs->currentPromise = $yielded;
                 $cs->reactor->immediately('Amp\__coroutineNextTick', ["cb_data" => $cs]);

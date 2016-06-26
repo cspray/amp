@@ -15,5 +15,4 @@ class CoroutineState {
     public $generator;
     public $returnValue;
     public $currentPromise;
-    public $nestingLevel;
 }

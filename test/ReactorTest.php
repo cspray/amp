@@ -713,4 +713,38 @@ abstract class ReactorTest extends BaseTest {
 
         \Amp\run();
     }
+
+    private function asyncTest(callable $testCase) {
+        $runner = function() use($testCase) {
+            $timeoutWatcher = \Amp\once(function() {
+                $this->fail('FAILED! Timeout occurred');
+                \Amp\stop();
+            }, 1000);
+            $done = function() use($timeoutWatcher) {
+                \Amp\cancel($timeoutWatcher);
+            };
+            try {
+                yield from $testCase($done);
+            } catch (\Throwable $error) {
+                $this->fail($error);
+                \Amp\cancel($timeoutWatcher);
+            }
+        };
+        \Amp\run($runner);
+    }
+
+    public function testYieldMultiplePromisesCoroutine() {
+        $numPromise = function($number) {
+            return new \Amp\Success($number);
+        };
+        $this->asyncTest(function(callable $done) use($numPromise) {
+            $one = yield $numPromise(1);
+            $two = yield $numPromise(2);
+            $three = yield $numPromise(3);
+            $four = yield $numPromise(4);
+
+            $this->assertSame([1, 2, 3, 4], [$one, $two, $three, $four]);
+            $done();
+        });
+    }
 }
